@@ -159,15 +159,25 @@ handle_message(Fun, Key,
 	    props = #'P_basic' {
 	        content_type = Type,
 	        correlation_id = CorrID,
-	        reply_to = ReplyTo }}, IState, Channel) ->
-    case Fun(Key, Type, Payload, IState) of
+	        reply_to = ReplyTo } = Props}, IState, Channel) ->
+    Return = case erlang:fun_info(Fun, arity) of
+                 {arity, 4} -> Fun(Key, Type, Payload, IState);
+                 {arity, 5} -> Fun(Key, Type, Payload, Props, IState)
+             end,
+    case Return of
         ack -> {ack, IState};
         {ack, IState2} -> {ack, IState2};
         {reply, CType, Msg} ->
             reply(Channel, CorrID, ReplyTo, CType, Msg),
             {ack, IState};
+        {reply, CType, Msg, #'P_basic'{} = RProps} ->
+            reply(Channel, CorrID, ReplyTo, CType, Msg, RProps),
+            {ack, IState};
         {reply, CType, Msg, IState2} ->
             reply(Channel, CorrID, ReplyTo, CType, Msg),
+            {ack, IState2};
+        {reply, CType, Msg, RProps, IState2} ->
+            reply(Channel, CorrID, ReplyTo, CType, Msg, RProps),
             {ack, IState2};
         reject -> {reject, IState};
         {reject, IState2} -> {reject, IState2};
@@ -193,16 +203,20 @@ invoke_state(_) -> init.
 handle_info(#{ handle_info := Handler }) -> Handler;
 handle_info(_) -> undefined.
 
-reply(_Ch, _CorrID, undefined, _CType, _Msg) ->
+
+reply(Ch, CorrID, ReplyTo, CType, Msg) ->
+    reply(Ch, CorrID, ReplyTo, CType, Msg, #'P_basic'{}).
+
+reply(_Ch, _CorrID, undefined, _CType, _Msg, _Props) ->
     lager:warning("Replying to target with no reply-to queue defined"),
     ok;
-reply(Ch, CorrID, ReplyTo, CType, Msg) ->
+reply(Ch, CorrID, ReplyTo, CType, Msg, Props) ->
     Publish = #'basic.publish' {
         exchange = <<>>,
         routing_key = ReplyTo
     },
-    Props = #'P_basic' { content_type = CType, correlation_id = CorrID },
-    AMQPMsg = #amqp_msg { props = Props, payload = Msg},
+    NewProps = Props#'P_basic' { content_type = CType, correlation_id = CorrID },
+    AMQPMsg = #amqp_msg { props = NewProps, payload = Msg},
     amqp_channel:cast(Ch, Publish, AMQPMsg).
 
 await_cancel_ok() ->

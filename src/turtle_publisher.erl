@@ -339,10 +339,15 @@ exo_update(#state { conn_name = ConnName, name = Name }, T, C) ->
     exometer:update([ConnName, Name, T], C).
 
 %% Compute the properties of an AMQP message
-properties(ContentType, #{ delivery_mode := persistent }) ->
-    #'P_basic' { content_type = ContentType, delivery_mode = 2 };
-properties(ContentType, #{ delivery_mode := ephemeral }) ->
-    #'P_basic' { content_type = ContentType }.
+properties(ContentType, #{ properties := Props } = Opts) ->
+    properties(Props, ContentType, Opts);
+properties(ContentType, Opts) ->
+    properties(#'P_basic'{}, ContentType, Opts).
+
+properties(Props, ContentType, #{ delivery_mode := persistent }) ->
+    Props#'P_basic' { content_type = ContentType, delivery_mode = 2 };
+properties(Props, ContentType, #{ delivery_mode := ephemeral }) ->
+    Props#'P_basic' { content_type = ContentType }.
 
 %% Create a new publish package
 mk_publish(Exch, Key, ContentType, Payload, Opts) ->

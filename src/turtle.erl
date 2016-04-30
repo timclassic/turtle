@@ -52,7 +52,7 @@
 	  Payload :: iodata().
 
 publish(Pub, X, Key, CType, Payload) ->
-    publish(Pub, X, Key, CType, Payload, #{ delivery_mode => ephemeral }).
+    publish(Pub, X, Key, CType, Payload, #{}).
 
 %% @equiv publish_sync(Name, Exch, Key, ContentType, Payload, #{ delivery_mode => ephemeral })
 
@@ -65,7 +65,7 @@ publish(Pub, X, Key, CType, Payload) ->
 	  Payload :: iodata().
 
 publish_sync(Pub, X, Key, CType, Payload) ->
-    publish_sync(Pub, X, Key, CType, Payload, #{ delivery_mode => ephemeral }).
+    publish_sync(Pub, X, Key, CType, Payload, #{}).
 
 %% @doc publish(Name, Exch, Key, ContentType, Payload, Opts) publishes messages.
 %%
@@ -92,7 +92,8 @@ publish_sync(Pub, X, Key, CType, Payload) ->
 	  Payload :: iodata(),
 	  Opts :: #{ atom() => any() }.
 publish(Pub, X, Key, CType, Payload, Opts) ->
-    turtle_publisher:publish(Pub, X, Key, CType, Payload, Opts).
+    FullOpts = maps:merge(Opts, #{ delivery_mode => ephemeral }),
+    turtle_publisher:publish(Pub, X, Key, CType, Payload, FullOpts).
 
 %% @doc rpc/5 performs RPC calls over a publisher
 %%
@@ -242,7 +243,8 @@ rpc_sync(Pub, X, Key, CType, Payload, #{ timeout := Timeout }) ->
 	  Payload :: iodata(),
 	  Opts :: #{ atom() => any() }.
 publish_sync(Pub, X, Key, CType, Payload, Opts) ->
-    turtle_publisher:publish_sync(Pub, X, Key, CType, Payload, Opts).
+    FullOpts = maps:merge(Opts, #{ delivery_mode => ephemeral }),
+    turtle_publisher:publish_sync(Pub, X, Key, CType, Payload, FullOpts).
 
 %% -- PRIVATE API ---------------------------------------------------
 
